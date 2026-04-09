@@ -1,0 +1,65 @@
+{
+  "realm": "carinosas",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "carinosas-client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "ADMIN" },
+      { "name": "DETECTIVE" },
+      { "name": "ANALYST" }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@carinosas.com",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "admin123", "temporary": false }
+      ],
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "username": "detective",
+      "firstName": "Detective",
+      "lastName": "Luis",
+      "email": "detective@carinosas.com",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "detective123", "temporary": false }
+      ],
+      "realmRoles": ["DETECTIVE"]
+    },
+    {
+      "username": "analyst",
+      "firstName": "Analyst",
+      "lastName": "User",
+      "email": "analyst@carinosas.com",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "analyst123", "temporary": false }
+      ],
+      "realmRoles": ["ANALYST"]
+    }
+  ]
+}
