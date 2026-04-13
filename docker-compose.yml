@@ -36,7 +36,7 @@ services:
     networks:
       - carinosas-network
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8090 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8090 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -47,6 +47,7 @@ services:
       context: ./case-service
       dockerfile: Dockerfile
     container_name: carinosas-case-service
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,12 +60,19 @@ services:
       - "8081:8081"
     networks:
       - carinosas-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   people-service:
     build:
       context: ./people-service
       dockerfile: Dockerfile
     container_name: carinosas-people-service
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,12 +85,19 @@ services:
       - "8082:8082"
     networks:
       - carinosas-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   evidence-service:
     build:
       context: ./evidence-service
       dockerfile: Dockerfile
     container_name: carinosas-evidence-service
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,12 +110,19 @@ services:
       - "8083:8083"
     networks:
       - carinosas-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   task-service:
     build:
       context: ./task-service
       dockerfile: Dockerfile
     container_name: carinosas-task-service
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,23 +135,30 @@ services:
       - "8084:8084"
     networks:
       - carinosas-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   api-gateway:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
     container_name: carinosas-api-gateway
+    restart: on-failure
     depends_on:
       keycloak:
         condition: service_healthy
       case-service:
-        condition: service_started
+        condition: service_healthy
       people-service:
-        condition: service_started
+        condition: service_healthy
       evidence-service:
-        condition: service_started
+        condition: service_healthy
       task-service:
-        condition: service_started
+        condition: service_healthy
     environment:
       CASE_SERVICE_HOST: case-service
       PEOPLE_SERVICE_HOST: people-service
