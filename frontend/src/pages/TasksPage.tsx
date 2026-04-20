@@ -30,6 +30,7 @@ export function TasksPage({ role }: { role: string }) {
   const [status, setStatus] = useState<string>(TaskStatus.PENDING);
   const [caseId, setCaseId] = useState("");
   const [assignedPersonId, setAssignedPersonId] = useState("");
+  const [evidenceId, setEvidenceId] = useState("");
   const [dueDate, setDueDate] = useState("");
 
   const load = async () => {
@@ -51,7 +52,7 @@ export function TasksPage({ role }: { role: string }) {
 
   const resetForm = () => {
     setTitle(""); setDescription(""); setPriority(TaskPriority.MEDIUM); setStatus(TaskStatus.PENDING);
-    setCaseId(""); setAssignedPersonId(""); setDueDate(""); setEditing(null);
+    setCaseId(""); setAssignedPersonId(""); setEvidenceId(""); setDueDate(""); setEditing(null);
   };
 
   const openCreate = () => { resetForm(); setDialogOpen(true); };
@@ -64,6 +65,7 @@ export function TasksPage({ role }: { role: string }) {
     setStatus(t.status);
     setCaseId(t.caseId);
     setAssignedPersonId(t.assignedPersonId || "");
+    setEvidenceId(t.evidenceId || "");
     setDueDate(t.dueDate ? t.dueDate.slice(0, 16) : "");
     setDialogOpen(true);
   };
@@ -74,6 +76,7 @@ export function TasksPage({ role }: { role: string }) {
         const body: TaskUpdateRequest = {
           title, description, priority: priority as TaskPriority, status: status as TaskStatus,
           assignedPersonId: assignedPersonId || undefined,
+          evidenceId: evidenceId || undefined,
           dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         };
         await api.put(`/api/tasks/${editing.id}`, body);
@@ -81,6 +84,7 @@ export function TasksPage({ role }: { role: string }) {
         const body: TaskRequest = {
           title, description, priority: priority as TaskPriority, caseId,
           assignedPersonId: assignedPersonId || undefined,
+          evidenceId: evidenceId || undefined,
           dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         };
         await api.post("/api/tasks", body);
@@ -186,6 +190,10 @@ export function TasksPage({ role }: { role: string }) {
                   <Input value={assignedPersonId} onChange={(e) => setAssignedPersonId(e.target.value)} placeholder="UUID of a person" />
                 </div>
                 <div className="space-y-2">
+                  <Label>Evidence ID (optional)</Label>
+                  <Input value={evidenceId} onChange={(e) => setEvidenceId(e.target.value)} placeholder="UUID of an evidence item" />
+                </div>
+                <div className="space-y-2">
                   <Label>Due Date (optional)</Label>
                   <Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                 </div>
@@ -206,13 +214,14 @@ export function TasksPage({ role }: { role: string }) {
             <TableHead>Priority</TableHead>
             <TableHead>Case ID</TableHead>
             <TableHead>Assigned To</TableHead>
+            <TableHead>Evidence</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {tasks.length === 0 ? (
-            <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No tasks found</TableCell></TableRow>
+            <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No tasks found</TableCell></TableRow>
           ) : (
             tasks.map((t) => (
               <TableRow key={t.id}>
@@ -227,6 +236,7 @@ export function TasksPage({ role }: { role: string }) {
                 <TableCell><Badge variant="secondary">{t.priority}</Badge></TableCell>
                 <TableCell className="text-xs font-mono max-w-32 truncate">{t.caseId}</TableCell>
                 <TableCell className="text-xs font-mono max-w-32 truncate">{t.assignedPersonId || "—"}</TableCell>
+                <TableCell className="text-xs font-mono max-w-32 truncate">{t.evidenceId || "—"}</TableCell>
                 <TableCell className="text-xs">{t.dueDate ? new Date(t.dueDate).toLocaleString() : "—"}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">

@@ -158,6 +158,7 @@ export interface TaskRequest {
   priority: TaskPriority;
   caseId: string;
   assignedPersonId?: string;
+  evidenceId?: string;
   dueDate?: string;
 }
 
@@ -167,6 +168,7 @@ export interface TaskUpdateRequest {
   status?: TaskStatus;
   priority?: TaskPriority;
   assignedPersonId?: string;
+  evidenceId?: string;
   dueDate?: string;
 }
 
@@ -178,7 +180,32 @@ export interface TaskResponse {
   priority: TaskPriority;
   caseId: string;
   assignedPersonId: string;
+  evidenceId: string;
   dueDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// === KAFKA LINK RESPONSES ===
+export interface TaskAssignmentResponse {
+  id: string;
+  taskId: string;
+  personId: string;
+  caseId: string;
+  taskTitle: string;
+  taskStatus: string;
+  taskPriority: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskEvidenceLinkResponse {
+  id: string;
+  taskId: string;
+  evidenceId: string;
+  caseId: string;
+  taskTitle: string;
+  taskStatus: string;
   createdAt: string;
   updatedAt: string;
 }
