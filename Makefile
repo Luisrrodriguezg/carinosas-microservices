@@ -1,5 +1,5 @@
-JAVA_HOME := /opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home
 SERVICES := case-service people-service evidence-service task-service api-gateway
+export JAVA_HOME ?= $(JAVA_HOME)
 
 .PHONY: dev build clean stop frontend
 
@@ -14,7 +14,7 @@ dev: build
 build:
 	@for svc in $(SERVICES); do \
 		echo "Building $$svc..."; \
-		cd $$svc && JAVA_HOME=$(JAVA_HOME) ./mvnw clean package -DskipTests -q && cd ..; \
+		cd $$svc && ./mvnw clean package -DskipTests -q && cd ..; \
 	done
 	@echo "All services built."
 
