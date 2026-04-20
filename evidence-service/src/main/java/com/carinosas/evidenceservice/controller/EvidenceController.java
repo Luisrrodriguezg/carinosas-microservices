@@ -46,6 +46,12 @@ public class EvidenceController {
         evidenceService.delete(id);
     }
 
+    // ── Task Links ─────────────────────────────────────────────
+    @GetMapping("/{id}/tasks")
+    public List<TaskEvidenceLinkResponse> getTasksByEvidence(@PathVariable UUID id) {
+        return evidenceService.findTasksByEvidenceId(id);
+    }
+
     // ── Custody Chain ─────────────────────────────────────────
     @PostMapping("/{id}/custody")
     @ResponseStatus(HttpStatus.CREATED)

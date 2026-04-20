@@ -13,6 +13,7 @@ public record TaskResponse(
         TaskPriority priority,
         UUID caseId,
         UUID assignedPersonId,
+        UUID evidenceId,
         Instant dueDate,
         Instant createdAt,
         Instant updatedAt

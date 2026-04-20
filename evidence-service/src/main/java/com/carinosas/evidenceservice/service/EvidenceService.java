@@ -2,10 +2,12 @@ package com.carinosas.evidenceservice.service;
 
 import com.carinosas.evidenceservice.domain.CustodyRecord;
 import com.carinosas.evidenceservice.domain.Evidence;
+import com.carinosas.evidenceservice.domain.TaskEvidenceLink;
 import com.carinosas.evidenceservice.dto.*;
 import com.carinosas.evidenceservice.exceptions.EvidenceNotFoundException;
 import com.carinosas.evidenceservice.repository.CustodyRecordRepository;
 import com.carinosas.evidenceservice.repository.EvidenceRepository;
+import com.carinosas.evidenceservice.repository.TaskEvidenceLinkRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ public class EvidenceService {
 
     private final EvidenceRepository evidenceRepository;
     private final CustodyRecordRepository custodyRecordRepository;
+    private final TaskEvidenceLinkRepository taskEvidenceLinkRepository;
 
     public EvidenceResponse create(EvidenceRequest request) {
         var entity = Evidence.builder()
@@ -91,6 +94,20 @@ public class EvidenceService {
         return custodyRecordRepository
                 .findByEvidenceIdOrderByPerformedAtAsc(evidenceId)
                 .stream().map(this::toCustodyResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskEvidenceLinkResponse> findTasksByEvidenceId(UUID evidenceId) {
+        return taskEvidenceLinkRepository.findByEvidenceId(evidenceId).stream()
+                .map(this::toTaskEvidenceLinkResponse).toList();
+    }
+
+    private TaskEvidenceLinkResponse toTaskEvidenceLinkResponse(TaskEvidenceLink tel) {
+        return new TaskEvidenceLinkResponse(
+                tel.getId(), tel.getTaskId(), tel.getEvidenceId(),
+                tel.getCaseId(), tel.getTaskTitle(), tel.getTaskStatus(),
+                tel.getCreatedAt(), tel.getUpdatedAt()
+        );
     }
 
     private EvidenceResponse toResponse(Evidence e) {

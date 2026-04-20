@@ -11,5 +11,6 @@ public record TaskUpdateRequest(
         TaskStatus status,
         TaskPriority priority,
         UUID assignedPersonId,
+        UUID evidenceId,
         Instant dueDate
 ) {}

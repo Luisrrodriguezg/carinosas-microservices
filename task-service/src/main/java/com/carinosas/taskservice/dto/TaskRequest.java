@@ -19,5 +19,6 @@ public record TaskRequest(
         UUID caseId,
 
         UUID assignedPersonId,
+        UUID evidenceId,
         Instant dueDate
 ) {}
