@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { EvidenceResponse, EvidenceRequest, EvidenceUpdateRequest, CustodyRecordResponse, CustodyRecordRequest } from "@/types";
+import type { EvidenceResponse, EvidenceRequest, EvidenceUpdateRequest, CustodyRecordResponse, CustodyRecordRequest, TaskEvidenceLinkResponse, CaseResponse } from "@/types";
 import { EvidenceType, EvidenceStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,17 @@ export function EvidencePage({ role }: { role: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EvidenceResponse | null>(null);
 
+  const [cases, setCases] = useState<CaseResponse[]>([]);
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [evidenceType, setEvidenceType] = useState<string>(EvidenceType.PHYSICAL);
   const [evidenceStatus, setEvidenceStatus] = useState<string>(EvidenceStatus.COLLECTED);
   const [caseId, setCaseId] = useState("");
+
+  const [tasksDialogOpen, setTasksDialogOpen] = useState(false);
+  const [selectedEvidenceForTasks, setSelectedEvidenceForTasks] = useState<EvidenceResponse | null>(null);
+  const [evidenceTasks, setEvidenceTasks] = useState<TaskEvidenceLinkResponse[]>([]);
 
   const [custodyDialogOpen, setCustodyDialogOpen] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceResponse | null>(null);
@@ -55,7 +61,11 @@ export function EvidencePage({ role }: { role: string }) {
     setEvidenceStatus(EvidenceStatus.COLLECTED); setCaseId(""); setEditing(null);
   };
 
-  const openCreate = () => { resetForm(); setDialogOpen(true); };
+  const loadCases = async () => {
+    try { setCases(await api.get<CaseResponse[]>("/api/cases")); } catch { /* empty */ }
+  };
+
+  const openCreate = () => { resetForm(); loadCases(); setDialogOpen(true); };
 
   const openEdit = (ev: EvidenceResponse) => {
     setEditing(ev);
@@ -91,6 +101,17 @@ export function EvidencePage({ role }: { role: string }) {
     } catch (e: unknown) {
       setError((e as Error).message);
     }
+  };
+
+  const openTasks = async (ev: EvidenceResponse) => {
+    setSelectedEvidenceForTasks(ev);
+    try {
+      const data = await api.get<TaskEvidenceLinkResponse[]>(`/api/evidences/${ev.id}/tasks`);
+      setEvidenceTasks(data);
+    } catch {
+      setEvidenceTasks([]);
+    }
+    setTasksDialogOpen(true);
   };
 
   const openCustody = async (ev: EvidenceResponse) => {
@@ -184,8 +205,13 @@ export function EvidencePage({ role }: { role: string }) {
                 )}
                 {!editing && (
                   <div className="space-y-2">
-                    <Label>Case ID *</Label>
-                    <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="UUID of the case" />
+                    <Label>Case *</Label>
+                    <Select value={caseId} onValueChange={(v) => { if (v) setCaseId(v); }}>
+                      <SelectTrigger><SelectValue placeholder="Select a case" /></SelectTrigger>
+                      <SelectContent>
+                        {cases.map((c) => <SelectItem key={c.id} value={c.id}>{c.title} ({c.status})</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 <Button onClick={handleSubmit} disabled={!name || (!editing && !caseId)}>
@@ -196,6 +222,43 @@ export function EvidencePage({ role }: { role: string }) {
           </Dialog>
         )}
       </div>
+
+      <Dialog open={tasksDialogOpen} onOpenChange={setTasksDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Tasks linked to {selectedEvidenceForTasks?.name}</DialogTitle>
+          </DialogHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Task</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Case ID</TableHead>
+                <TableHead>Linked At</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {evidenceTasks.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No tasks linked to this evidence</TableCell></TableRow>
+              ) : (
+                evidenceTasks.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell>
+                      <div>
+                        <span className="font-medium">{t.taskTitle}</span>
+                        <p className="text-xs text-muted-foreground font-mono">{t.taskId}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell><Badge variant="outline">{t.taskStatus}</Badge></TableCell>
+                    <TableCell className="text-xs font-mono max-w-32 truncate">{t.caseId}</TableCell>
+                    <TableCell className="text-xs">{new Date(t.createdAt).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={custodyDialogOpen} onOpenChange={setCustodyDialogOpen}>
         <DialogContent className="max-w-2xl">
@@ -283,6 +346,7 @@ export function EvidencePage({ role }: { role: string }) {
                 <TableCell className="text-xs">{new Date(ev.createdAt).toLocaleString()}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={() => openTasks(ev)}>Tasks</Button>
                     <Button variant="outline" size="sm" onClick={() => openCustody(ev)}>Custody</Button>
                     {canWrite(role) && <Button variant="outline" size="sm" onClick={() => openEdit(ev)}>Edit</Button>}
                     {canDelete(role) && <Button variant="destructive" size="sm" onClick={() => handleDelete(ev.id)}>Delete</Button>}

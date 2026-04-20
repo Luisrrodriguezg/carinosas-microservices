@@ -1,11 +1,14 @@
 package com.carinosas.peopleservice.service;
 
 import com.carinosas.peopleservice.domain.Person;
+import com.carinosas.peopleservice.domain.TaskAssignment;
 import com.carinosas.peopleservice.dto.PersonRequest;
 import com.carinosas.peopleservice.dto.PersonResponse;
 import com.carinosas.peopleservice.dto.PersonUpdateRequest;
+import com.carinosas.peopleservice.dto.TaskAssignmentResponse;
 import com.carinosas.peopleservice.exceptions.PersonNotFoundException;
 import com.carinosas.peopleservice.repository.PersonRepository;
+import com.carinosas.peopleservice.repository.TaskAssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,7 @@ import java.util.UUID;
 public class PersonService {
 
     private final PersonRepository personRepository;
+    private final TaskAssignmentRepository taskAssignmentRepository;
 
     public PersonResponse create(PersonRequest request) {
         var entity = Person.builder()
@@ -63,6 +67,20 @@ public class PersonService {
         if (!personRepository.existsById(id))
             throw new PersonNotFoundException(id);
         personRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskAssignmentResponse> findTasksByPersonId(UUID personId) {
+        return taskAssignmentRepository.findByPersonId(personId).stream()
+                .map(this::toTaskAssignmentResponse).toList();
+    }
+
+    private TaskAssignmentResponse toTaskAssignmentResponse(TaskAssignment ta) {
+        return new TaskAssignmentResponse(
+                ta.getId(), ta.getTaskId(), ta.getPersonId(),
+                ta.getCaseId(), ta.getTaskTitle(), ta.getTaskStatus(),
+                ta.getTaskPriority(), ta.getCreatedAt(), ta.getUpdatedAt()
+        );
     }
 
     private PersonResponse toResponse(Person p) {

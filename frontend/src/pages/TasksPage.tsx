@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { TaskResponse, TaskRequest, TaskUpdateRequest } from "@/types";
+import type { TaskResponse, TaskRequest, TaskUpdateRequest, CaseResponse, PersonResponse, EvidenceResponse } from "@/types";
 import { TaskStatus, TaskPriority } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,17 @@ export function TasksPage({ role }: { role: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TaskResponse | null>(null);
 
+  const [cases, setCases] = useState<CaseResponse[]>([]);
+  const [people, setPeople] = useState<PersonResponse[]>([]);
+  const [evidences, setEvidences] = useState<EvidenceResponse[]>([]);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<string>(TaskPriority.MEDIUM);
   const [status, setStatus] = useState<string>(TaskStatus.PENDING);
   const [caseId, setCaseId] = useState("");
   const [assignedPersonId, setAssignedPersonId] = useState("");
+  const [evidenceId, setEvidenceId] = useState("");
   const [dueDate, setDueDate] = useState("");
 
   const load = async () => {
@@ -51,10 +56,21 @@ export function TasksPage({ role }: { role: string }) {
 
   const resetForm = () => {
     setTitle(""); setDescription(""); setPriority(TaskPriority.MEDIUM); setStatus(TaskStatus.PENDING);
-    setCaseId(""); setAssignedPersonId(""); setDueDate(""); setEditing(null);
+    setCaseId(""); setAssignedPersonId(""); setEvidenceId(""); setDueDate(""); setEditing(null);
   };
 
-  const openCreate = () => { resetForm(); setDialogOpen(true); };
+  const loadDropdowns = async () => {
+    try {
+      const [c, p, e] = await Promise.all([
+        api.get<CaseResponse[]>("/api/cases"),
+        api.get<PersonResponse[]>("/api/people"),
+        api.get<EvidenceResponse[]>("/api/evidences"),
+      ]);
+      setCases(c); setPeople(p); setEvidences(e);
+    } catch { /* dropdowns will just be empty */ }
+  };
+
+  const openCreate = () => { resetForm(); loadDropdowns(); setDialogOpen(true); };
 
   const openEdit = (t: TaskResponse) => {
     setEditing(t);
@@ -64,7 +80,9 @@ export function TasksPage({ role }: { role: string }) {
     setStatus(t.status);
     setCaseId(t.caseId);
     setAssignedPersonId(t.assignedPersonId || "");
+    setEvidenceId(t.evidenceId || "");
     setDueDate(t.dueDate ? t.dueDate.slice(0, 16) : "");
+    loadDropdowns();
     setDialogOpen(true);
   };
 
@@ -74,6 +92,7 @@ export function TasksPage({ role }: { role: string }) {
         const body: TaskUpdateRequest = {
           title, description, priority: priority as TaskPriority, status: status as TaskStatus,
           assignedPersonId: assignedPersonId || undefined,
+          evidenceId: evidenceId || undefined,
           dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         };
         await api.put(`/api/tasks/${editing.id}`, body);
@@ -81,6 +100,7 @@ export function TasksPage({ role }: { role: string }) {
         const body: TaskRequest = {
           title, description, priority: priority as TaskPriority, caseId,
           assignedPersonId: assignedPersonId || undefined,
+          evidenceId: evidenceId || undefined,
           dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         };
         await api.post("/api/tasks", body);
@@ -177,13 +197,34 @@ export function TasksPage({ role }: { role: string }) {
                 </div>
                 {!editing && (
                   <div className="space-y-2">
-                    <Label>Case ID *</Label>
-                    <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="UUID of the case" />
+                    <Label>Case *</Label>
+                    <Select value={caseId} onValueChange={(v) => { if (v) setCaseId(v); }}>
+                      <SelectTrigger><SelectValue placeholder="Select a case" /></SelectTrigger>
+                      <SelectContent>
+                        {cases.map((c) => <SelectItem key={c.id} value={c.id}>{c.title} ({c.status})</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label>Assigned Person ID (optional)</Label>
-                  <Input value={assignedPersonId} onChange={(e) => setAssignedPersonId(e.target.value)} placeholder="UUID of a person" />
+                  <Label>Assigned Person (optional)</Label>
+                  <Select value={assignedPersonId || "__none__"} onValueChange={(v) => { if (v) setAssignedPersonId(v === "__none__" ? "" : v); }}>
+                    <SelectTrigger><SelectValue placeholder="Select a person" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {people.map((p) => <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName} ({p.role})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Evidence (optional)</Label>
+                  <Select value={evidenceId || "__none__"} onValueChange={(v) => { if (v) setEvidenceId(v === "__none__" ? "" : v); }}>
+                    <SelectTrigger><SelectValue placeholder="Select evidence" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {evidences.map((e) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.type})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Due Date (optional)</Label>
@@ -206,13 +247,14 @@ export function TasksPage({ role }: { role: string }) {
             <TableHead>Priority</TableHead>
             <TableHead>Case ID</TableHead>
             <TableHead>Assigned To</TableHead>
+            <TableHead>Evidence</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {tasks.length === 0 ? (
-            <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No tasks found</TableCell></TableRow>
+            <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No tasks found</TableCell></TableRow>
           ) : (
             tasks.map((t) => (
               <TableRow key={t.id}>
@@ -227,6 +269,7 @@ export function TasksPage({ role }: { role: string }) {
                 <TableCell><Badge variant="secondary">{t.priority}</Badge></TableCell>
                 <TableCell className="text-xs font-mono max-w-32 truncate">{t.caseId}</TableCell>
                 <TableCell className="text-xs font-mono max-w-32 truncate">{t.assignedPersonId || "—"}</TableCell>
+                <TableCell className="text-xs font-mono max-w-32 truncate">{t.evidenceId || "—"}</TableCell>
                 <TableCell className="text-xs">{t.dueDate ? new Date(t.dueDate).toLocaleString() : "—"}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">

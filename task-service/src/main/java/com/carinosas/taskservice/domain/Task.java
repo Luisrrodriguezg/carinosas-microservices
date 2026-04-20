@@ -38,6 +38,10 @@ public class Task {
     @Column
     private UUID assignedPersonId;
 
+    // Evidence linked — by ID only
+    @Column
+    private UUID evidenceId;
+
     @Column
     private Instant dueDate;
 

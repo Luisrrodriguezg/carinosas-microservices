@@ -3,6 +3,7 @@ package com.carinosas.peopleservice.controller;
 import com.carinosas.peopleservice.dto.PersonRequest;
 import com.carinosas.peopleservice.dto.PersonResponse;
 import com.carinosas.peopleservice.dto.PersonUpdateRequest;
+import com.carinosas.peopleservice.dto.TaskAssignmentResponse;
 import com.carinosas.peopleservice.service.PersonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,11 @@ public class PersonController {
     public PersonResponse update(@PathVariable UUID id,
                                  @RequestBody PersonUpdateRequest request) {
         return personService.update(id, request);
+    }
+
+    @GetMapping("/{id}/tasks")
+    public List<TaskAssignmentResponse> getTasksByPerson(@PathVariable UUID id) {
+        return personService.findTasksByPersonId(id);
     }
 
     @DeleteMapping("/{id}")

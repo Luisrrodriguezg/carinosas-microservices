@@ -13,6 +13,13 @@ Each microservice has its own Maven wrapper. Run commands from within the servic
 ./mvnw test -Dtest=ClassName  # Run a single test class
 ```
 
+Frontend (from `frontend/`):
+```bash
+npm install                   # Install dependencies
+npm run dev                   # Dev server (Vite)
+npm run build                 # Production build to dist/
+```
+
 Full stack via Docker (from repo root):
 ```bash
 docker-compose up --build     # Build and start all services + Postgres + Keycloak
@@ -39,6 +46,20 @@ Spring Boot microservices behind a Spring Cloud Gateway, authenticated via Keycl
 **Each microservice follows this layered pattern:**
 `controller/ → service/ → repository/` with `domain/` (JPA entities + enums), `dto/` (request/response), `exceptions/`, and `config/`.
 
+## Data Model & Cross-Service Relationships
+
+Case is the central aggregate — People, Evidence, and Tasks all reference a case via `caseId` (UUID, no FK constraint). Tasks also reference a person via `assignedPersonId`. These are loose references; there is no inter-service validation.
+
+- **CaseEntity** — status (OPEN, IN_PROGRESS, CLOSED, ARCHIVED), priority (LOW–CRITICAL)
+- **Person** — role (VICTIM, SUSPECT, WITNESS, DETECTIVE, ANALYST), linked to a case
+- **Evidence** — type (PHYSICAL, DIGITAL, TESTIMONIAL, DOCUMENTARY, FORENSIC), status (COLLECTED → DISPOSED)
+- **CustodyRecord** — chain-of-custody log entries for an Evidence item (in evidence-service)
+- **Task** — status (PENDING–CANCELLED), priority, linked to a case and optionally an assigned person
+
+## Health Checks
+
+All microservices expose `/actuator/health`. Docker Compose uses these for readiness. Keycloak uses `/health/ready`. The `/actuator/**` endpoints are unauthenticated.
+
 ## Key Configuration
 
 - Gateway routes and CORS: `api-gateway/src/main/resources/application.yml`
@@ -50,4 +71,5 @@ Spring Boot microservices behind a Spring Cloud Gateway, authenticated via Keycl
 
 - Java 21, Spring Boot 4.0.5 (services) / 3.4.4 (gateway), Maven 3.9.14
 - Spring Data JPA + Hibernate (ddl-auto: update), Lombok, Jakarta Validation
+- Frontend: React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui
 - Docker with docker-compose, eclipse-temurin:21-jre-alpine base images
