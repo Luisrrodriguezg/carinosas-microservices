@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carinosas Microservices — Technical Documentation</title>
+<style>
+  :root { --bg: #ffffff; --fg: #1a1a2e; --accent: #2563eb; --border: #e2e8f0; --muted: #64748b; --card: #f8fafc; --code-bg: #f1f5f9; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--fg); background: var(--bg); line-height: 1.7; max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 1.4rem; font-weight: 600; margin-top: 48px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); }
+  h3 { font-size: 1.1rem; font-weight: 600; margin-top: 24px; margin-bottom: 8px; }
+  p, li { margin-bottom: 8px; }
+  ul, ol { padding-left: 24px; }
+  .subtitle { color: var(--muted); font-size: 1rem; margin-bottom: 32px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 10px 14px; border: 1px solid var(--border); }
+  th { background: var(--card); font-weight: 600; }
+  code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85em; background: var(--code-bg); padding: 2px 6px; border-radius: 4px; }
+  .badge { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 10px; border-radius: 12px; margin-right: 4px; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-orange { background: #ffedd5; color: #9a3412; }
+  .badge-purple { background: #f3e8ff; color: #6b21a8; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .diagram { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin: 16px 0; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.78rem; line-height: 1.5; white-space: pre; overflow-x: auto; }
+  .flow-diagram { text-align: center; padding: 32px 16px; }
+  .flow-diagram .box { display: inline-block; border: 2px solid var(--accent); border-radius: 8px; padding: 10px 18px; margin: 4px; font-weight: 600; font-size: 0.85rem; background: white; }
+  .flow-diagram .box-infra { border-color: #059669; color: #059669; }
+  .flow-diagram .box-kafka { border-color: #d97706; color: #d97706; }
+  .flow-diagram .arrow { color: var(--muted); font-size: 1.2rem; margin: 0 4px; }
+  .section-meta { display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0; }
+  .section-meta .meta-item { flex: 1; min-width: 200px; }
+  @media print { body { padding: 20px; } h2 { page-break-before: auto; } .diagram { font-size: 0.7rem; } }
+</style>
+</head>
+<body>
+
+<h1>Carinosas Microservices</h1>
+<p class="subtitle">Criminal Investigation Case Management System — Technical Documentation</p>
+
+<!-- ================================================================ -->
+<h2>1. Solution Overview</h2>
+
+<p>Carinosas is a <strong>microservices-based case management system</strong> designed for criminal investigation workflows. It manages cases, people involved (victims, suspects, witnesses), evidence with chain of custody, and tasks assigned to investigation team members.</p>
+
+<p>The system follows a <strong>loosely-coupled event-driven architecture</strong>: services own their data independently and communicate through Apache Kafka events, eliminating synchronous inter-service calls.</p>
+
+<!-- ================================================================ -->
+<h2>2. Technology Stack</h2>
+
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Version</th></tr>
+  <tr><td>Language</td><td>Java (OpenJDK)</td><td>21</td></tr>
+  <tr><td>Framework</td><td>Spring Boot</td><td>4.0.5 (services) / 3.4.4 (gateway)</td></tr>
+  <tr><td>API Gateway</td><td>Spring Cloud Gateway</td><td>2024.0.1</td></tr>
+  <tr><td>Persistence</td><td>Spring Data JPA + Hibernate</td><td>—</td></tr>
+  <tr><td>Database</td><td>PostgreSQL</td><td>15</td></tr>
+  <tr><td>Authentication</td><td>Keycloak (OAuth 2.0 / JWT)</td><td>24.0.0</td></tr>
+  <tr><td>Messaging</td><td>Apache Kafka (KRaft mode)</td><td>3.9.0</td></tr>
+  <tr><td>Frontend</td><td>React + TypeScript + Vite + Tailwind CSS</td><td>React 19</td></tr>
+  <tr><td>Containerization</td><td>Docker + Docker Compose</td><td>—</td></tr>
+  <tr><td>Build Tool</td><td>Apache Maven</td><td>3.9.14</td></tr>
+</table>
+
+<!-- ================================================================ -->
+<h2>3. Microservices Architecture</h2>
+
+<div class="card">
+<div class="flow-diagram">
+<div style="margin-bottom: 16px;">
+  <span class="box">React Frontend<br><small>:5173</small></span>
+</div>
+<div style="margin-bottom: 4px; color: var(--muted);">▼ HTTP (Bearer JWT)</div>
+<div style="margin-bottom: 16px;">
+  <span class="box" style="border-color: #dc2626; color: #dc2626;">API Gateway<br><small>:8080 — Auth + RBAC + Routing</small></span>
+</div>
+<div style="margin-bottom: 4px; color: var(--muted);">▼ Route by path</div>
+<div style="margin-bottom: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+  <span class="box">Case Service<br><small>:8081</small></span>
+  <span class="box">People Service<br><small>:8082</small></span>
+  <span class="box">Evidence Service<br><small>:8083</small></span>
+  <span class="box">Task Service<br><small>:8084</small></span>
+</div>
+<div style="margin-bottom: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+  <span class="box box-infra">PostgreSQL<br><small>:5432 — 4 databases</small></span>
+  <span class="box box-kafka">Kafka Broker<br><small>:9092 — KRaft</small></span>
+  <span class="box box-infra">Keycloak<br><small>:8090 — OAuth 2.0</small></span>
+</div>
+</div>
+</div>
+
+<h3>Service Responsibilities</h3>
+<table>
+  <tr><th>Service</th><th>Port</th><th>Base Path</th><th>Responsibility</th></tr>
+  <tr><td><strong>api-gateway</strong></td><td>8080</td><td>/api/**</td><td>Single entry point. Routes requests, enforces authentication (JWT) and authorization (RBAC)</td></tr>
+  <tr><td><strong>case-service</strong></td><td>8081</td><td>/api/cases</td><td>CRUD for investigation cases (title, status, priority)</td></tr>
+  <tr><td><strong>people-service</strong></td><td>8082</td><td>/api/people</td><td>Manages people linked to cases. Consumes Kafka events to track task assignments</td></tr>
+  <tr><td><strong>evidence-service</strong></td><td>8083</td><td>/api/evidences</td><td>Manages evidence items and chain of custody. Consumes Kafka events to track task links</td></tr>
+  <tr><td><strong>task-service</strong></td><td>8084</td><td>/api/tasks</td><td>Manages tasks assigned to people/evidence. Produces Kafka events on create/update/delete</td></tr>
+</table>
+
+<h3>Layered Architecture per Service</h3>
+<p>Each microservice follows the same internal layered structure:</p>
+<div class="diagram">Controller (REST endpoints)
+    ↓ receives HTTP request, validates input via Jakarta Validation
+Service (Business logic)
+    ↓ orchestrates operations, applies domain rules
+Repository (Data access)
+    ↓ Spring Data JPA interface extending JpaRepository
+Domain (JPA Entities + Enums)
+    ↓ maps to PostgreSQL tables via Hibernate (ddl-auto: update)
+Database (PostgreSQL — one database per service)</div>
+
+<p>Supporting packages: <code>dto/</code> (request/response records), <code>exceptions/</code> (custom exceptions + global handler), <code>config/</code> (Spring configuration beans), <code>event/</code> (Kafka event classes).</p>
+
+<!-- ================================================================ -->
+<h2>4. Security Architecture</h2>
+
+<h3>4.1 Authentication — Keycloak + OAuth 2.0</h3>
+
+<div class="card">
+<p><strong>Flow:</strong> The frontend authenticates users against Keycloak using the <strong>Resource Owner Password Credentials</strong> grant. Keycloak returns a signed <strong>JWT access token</strong> containing the user's realm roles. Every subsequent API request includes this token in the <code>Authorization: Bearer &lt;token&gt;</code> header.</p>
+</div>
+
+<div class="diagram">Frontend                    Keycloak                     API Gateway             Microservice
+   │                           │                              │                        │
+   │── POST /token ──────────▶│                              │                        │
+   │   (username + password)   │                              │                        │
+   │◀── JWT access_token ─────│                              │                        │
+   │                           │                              │                        │
+   │── GET /api/cases ────────────────────────────────────────▶│                        │
+   │   Authorization: Bearer JWT                              │                        │
+   │                           │                              │── validate JWT ───────▶│
+   │                           │◀── fetch JWKS ───────────────│   (signature check)    │
+   │                           │── public keys ──────────────▶│                        │
+   │                           │                              │── extract roles ──────▶│
+   │                           │                              │── check RBAC ─────────▶│
+   │                           │                              │── forward request ────▶│
+   │◀──────────────────────────────────────────────────────────│◀── response ──────────│</div>
+
+<p><strong>Keycloak configuration:</strong></p>
+<ul>
+  <li><strong>Realm:</strong> <code>carinosas</code></li>
+  <li><strong>Client:</strong> <code>carinosas-client</code> (public, direct access grants enabled)</li>
+  <li><strong>JWT validation:</strong> Gateway fetches public keys from <code>Keycloak JWKS endpoint</code> to verify token signatures</li>
+</ul>
+
+<h3>4.2 Authorization — Role-Based Access Control (RBAC)</h3>
+
+<p>The API Gateway extracts roles from the JWT <code>realm_access.roles</code> claim and enforces access rules <strong>before</strong> forwarding requests to downstream services. Individual microservices do not perform authorization — they trust the gateway.</p>
+
+<table>
+  <tr><th>Role</th><th>GET (Read)</th><th>POST (Create)</th><th>PUT/PATCH (Update)</th><th>DELETE</th></tr>
+  <tr>
+    <td><span class="badge badge-red">ADMIN</span></td>
+    <td>✅</td><td>✅</td><td>✅</td><td>✅</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-blue">DETECTIVE</span></td>
+    <td>✅</td><td>✅</td><td>✅</td><td>❌</td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-green">ANALYST</span></td>
+    <td>✅</td><td>❌</td><td>❌</td><td>❌</td>
+  </tr>
+</table>
+
+<p><strong>Test users</strong> (pre-configured in Keycloak realm):</p>
+<table>
+  <tr><th>Username</th><th>Password</th><th>Role</th></tr>
+  <tr><td><code>admin</code></td><td><code>admin123</code></td><td>ADMIN</td></tr>
+  <tr><td><code>detective</code></td><td><code>detective123</code></td><td>DETECTIVE</td></tr>
+  <tr><td><code>analyst</code></td><td><code>analyst123</code></td><td>ANALYST</td></tr>
+</table>
+
+<h3>4.3 Gateway Security Implementation</h3>
+
+<p>Implemented in <code>SecurityConfig.java</code> using Spring Security's reactive <code>ServerHttpSecurity</code>:</p>
+<ul>
+  <li><strong>CSRF:</strong> Disabled (stateless JWT-based API)</li>
+  <li><strong>CORS:</strong> Configured to allow all origins, methods, and headers</li>
+  <li><strong>JWT converter:</strong> Custom <code>ReactiveJwtAuthenticationConverter</code> extracts Keycloak's <code>realm_access.roles</code> and maps them to Spring Security <code>ROLE_*</code> authorities</li>
+  <li><strong>Actuator endpoints:</strong> Unauthenticated (health checks)</li>
+  <li><strong>OPTIONS preflight:</strong> Permitted without authentication</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2>5. Event-Driven Communication — Apache Kafka</h2>
+
+<h3>5.1 Problem</h3>
+<p>Each microservice owns its own database. When a task references a person and an evidence item, those services have no knowledge of the relationship. Querying "which tasks are assigned to this person?" would require synchronous cross-service REST calls — coupling services at runtime.</p>
+
+<h3>5.2 Solution — Event Sourcing via Kafka</h3>
+<p>Task-service publishes events to a <code>task-events</code> Kafka topic. Person-service and evidence-service consume these events and persist local projection tables, enabling queries without inter-service calls.</p>
+
+<div class="card">
+<div class="flow-diagram" style="text-align: left; font-family: monospace; font-size: 0.82rem;">
+<pre style="margin: 0;">
+  task-service                    Kafka                     person-service
+       │                           │                              │
+       │── save Task to DB         │                              │
+       │── publish TaskEvent ────▶ │ topic: task-events           │
+       │                           │ ─────────────────────────────▶ consume event
+       │                           │                              │── upsert task_assignments table
+       │                           │                              │
+       │                           │                        evidence-service
+       │                           │                              │
+       │                           │ ─────────────────────────────▶ consume event
+       │                           │                              │── upsert task_evidence_links table
+</pre>
+</div>
+</div>
+
+<h3>5.3 Event Structure</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+  <tr><td><code>eventType</code></td><td>String</td><td>TASK_CREATED, TASK_UPDATED, or TASK_DELETED</td></tr>
+  <tr><td><code>taskId</code></td><td>UUID</td><td>Unique identifier of the task</td></tr>
+  <tr><td><code>title</code></td><td>String</td><td>Task title (denormalized for consumer queries)</td></tr>
+  <tr><td><code>status</code></td><td>String</td><td>PENDING, IN_PROGRESS, COMPLETED, OVERDUE, CANCELLED</td></tr>
+  <tr><td><code>priority</code></td><td>String</td><td>LOW, MEDIUM, HIGH, CRITICAL</td></tr>
+  <tr><td><code>caseId</code></td><td>UUID</td><td>Referenced case</td></tr>
+  <tr><td><code>assignedPersonId</code></td><td>UUID</td><td>Person assigned (nullable)</td></tr>
+  <tr><td><code>evidenceId</code></td><td>UUID</td><td>Evidence linked (nullable)</td></tr>
+  <tr><td><code>occurredAt</code></td><td>Instant</td><td>Timestamp when the event was produced</td></tr>
+</table>
+
+<h3>5.4 Consumer Behavior</h3>
+<table>
+  <tr><th>Event</th><th>person-service</th><th>evidence-service</th></tr>
+  <tr><td>TASK_CREATED</td><td>Insert row in <code>task_assignments</code> if <code>assignedPersonId</code> is set</td><td>Insert row in <code>task_evidence_links</code> if <code>evidenceId</code> is set</td></tr>
+  <tr><td>TASK_UPDATED</td><td>Upsert: update existing row or insert new one. Remove if <code>assignedPersonId</code> is now null</td><td>Upsert: update existing row or insert new one. Remove if <code>evidenceId</code> is now null</td></tr>
+  <tr><td>TASK_DELETED</td><td>Delete row by <code>taskId</code></td><td>Delete row by <code>taskId</code></td></tr>
+</table>
+
+<h3>5.5 Kafka Configuration</h3>
+<ul>
+  <li><strong>Mode:</strong> KRaft (no Zookeeper required)</li>
+  <li><strong>Topic:</strong> <code>task-events</code> (auto-created)</li>
+  <li><strong>Message key:</strong> <code>taskId</code> (ensures per-task ordering)</li>
+  <li><strong>Serialization:</strong> Custom JSON serializer/deserializer using Jackson 3.x (compatible with Spring Boot 4.x)</li>
+  <li><strong>Consumer groups:</strong> <code>people-service</code> and <code>evidence-service</code> (each receives all events independently)</li>
+  <li><strong>Offset reset:</strong> <code>earliest</code> (consumers read from beginning on first connect)</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2>6. Docker Containerization</h2>
+
+<h3>6.1 Container Architecture</h3>
+<p>All services run as Docker containers orchestrated by <strong>Docker Compose</strong> on a single bridge network (<code>carinosas-network</code>), enabling service discovery by container name.</p>
+
+<table>
+  <tr><th>Container</th><th>Image</th><th>Port</th><th>Depends On</th></tr>
+  <tr><td>carinosas-postgres</td><td>postgres:15-alpine</td><td>5432</td><td>—</td></tr>
+  <tr><td>carinosas-kafka</td><td>apache/kafka:3.9.0</td><td>9092</td><td>—</td></tr>
+  <tr><td>carinosas-keycloak</td><td>keycloak:24.0.0</td><td>8090</td><td>—</td></tr>
+  <tr><td>carinosas-case-service</td><td>eclipse-temurin:21-jre-alpine</td><td>8081</td><td>postgres</td></tr>
+  <tr><td>carinosas-people-service</td><td>eclipse-temurin:21-jre-alpine</td><td>8082</td><td>postgres, kafka</td></tr>
+  <tr><td>carinosas-evidence-service</td><td>eclipse-temurin:21-jre-alpine</td><td>8083</td><td>postgres, kafka</td></tr>
+  <tr><td>carinosas-task-service</td><td>eclipse-temurin:21-jre-alpine</td><td>8084</td><td>postgres, kafka</td></tr>
+  <tr><td>carinosas-api-gateway</td><td>eclipse-temurin:21-jre-alpine</td><td>8080</td><td>all services, keycloak</td></tr>
+</table>
+
+<h3>6.2 Health Checks &amp; Startup Order</h3>
+<p>Docker Compose uses health checks to enforce startup order via <code>depends_on: condition: service_healthy</code>:</p>
+<ul>
+  <li><strong>PostgreSQL:</strong> <code>pg_isready</code></li>
+  <li><strong>Kafka:</strong> <code>nc -z kafka 9092</code> (TCP port check)</li>
+  <li><strong>Keycloak:</strong> <code>GET /health/ready</code> (HTTP 200)</li>
+  <li><strong>Microservices:</strong> <code>GET /actuator/health</code> (Spring Boot Actuator)</li>
+</ul>
+
+<h3>6.3 Database Isolation</h3>
+<p>A single PostgreSQL instance hosts <strong>four separate databases</strong>, one per service. Each service connects only to its own database — there are no cross-database queries or shared tables.</p>
+<table>
+  <tr><th>Service</th><th>Database</th></tr>
+  <tr><td>case-service</td><td><code>carinosas_case_db</code></td></tr>
+  <tr><td>people-service</td><td><code>carinosas_people_db</code></td></tr>
+  <tr><td>evidence-service</td><td><code>carinosas_evidence_db</code></td></tr>
+  <tr><td>task-service</td><td><code>carinosas_task_db</code></td></tr>
+</table>
+
+<h3>6.4 Dockerfile Pattern</h3>
+<p>All services use the same minimal Dockerfile:</p>
+<div class="diagram">FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY target/*.jar app.jar
+EXPOSE {port}
+ENTRYPOINT ["java", "-jar", "app.jar"]</div>
+<p>JARs are pre-built with Maven (<code>./mvnw clean package</code>) before <code>docker compose up --build</code>.</p>
+
+<!-- ================================================================ -->
+<h2>7. Entity Relationship Diagram</h2>
+
+<div class="diagram" style="font-size: 0.75rem;">
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                        CASE-SERVICE DB                                         │
+│  ┌─────────────────────────────────────┐                                                       │
+│  │            cases                     │                                                       │
+│  ├─────────────────────────────────────┤                                                       │
+│  │ PK  id            UUID              │◄──────────────────────────────────────────────┐        │
+│  │     title         VARCHAR (NOT NULL) │                                              │        │
+│  │     description   VARCHAR(2000)      │                                              │        │
+│  │     status        ENUM (CaseStatus)  │                                              │        │
+│  │     priority      ENUM (CasePriority)│                                              │        │
+│  │     created_by    VARCHAR            │                                              │        │
+│  │     created_at    TIMESTAMP          │                                              │        │
+│  │     updated_at    TIMESTAMP          │                                              │        │
+│  └─────────────────────────────────────┘                                              │        │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+          ▲ referenced by caseId (UUID — no FK, cross-database)                         │
+          │                                                                              │
+┌─────────┼──────────────────────────────────────┐  ┌────────────────────────────────────┼────────┐
+│ PEOPLE-SERVICE DB                              │  │ EVIDENCE-SERVICE DB                │        │
+│  ┌─────────────────────────────────────┐       │  │  ┌─────────────────────────────────┴──┐     │
+│  │            people                    │       │  │  │          evidences                  │     │
+│  ├─────────────────────────────────────┤       │  │  ├────────────────────────────────────┤     │
+│  │ PK  id            UUID              │◄──┐   │  │  │ PK  id            UUID             │◄─┐  │
+│  │     first_name    VARCHAR (NOT NULL) │   │   │  │  │     name          VARCHAR (NOT NULL)│  │  │
+│  │     last_name     VARCHAR (NOT NULL) │   │   │  │  │     description   VARCHAR(2000)     │  │  │
+│  │     role          ENUM (PersonRole)  │   │   │  │  │     type          ENUM (EvidenceType)│  │  │
+│  │     notes         VARCHAR(2000)      │   │   │  │  │     status        ENUM (EvidenceStatus) │  │
+│  │ FK  case_id       UUID (NOT NULL)    │───┘   │  │  │ FK  case_id       UUID (NOT NULL)  │──┘  │
+│  │     created_at    TIMESTAMP          │       │  │  │     created_at    TIMESTAMP        │     │
+│  │     updated_at    TIMESTAMP          │       │  │  │     updated_at    TIMESTAMP        │     │
+│  └─────────────────────────────────────┘       │  │  └────────────────────────────────────┘     │
+│                                                │  │                                             │
+│  ┌─────────────────────────────────────┐       │  │  ┌────────────────────────────────────┐     │
+│  │       task_assignments (Kafka)       │       │  │  │   task_evidence_links (Kafka)       │     │
+│  ├─────────────────────────────────────┤       │  │  ├────────────────────────────────────┤     │
+│  │ PK  id            UUID              │       │  │  │ PK  id            UUID             │     │
+│  │ FK  task_id       UUID (NOT NULL)    │──┐    │  │  │ FK  task_id       UUID (NOT NULL)  │──┐  │
+│  │ FK  person_id     UUID (NOT NULL)    │  │    │  │  │ FK  evidence_id   UUID (NOT NULL)  │  │  │
+│  │     case_id       UUID (NOT NULL)    │  │    │  │  │     case_id       UUID (NOT NULL)  │  │  │
+│  │     task_title    VARCHAR            │  │    │  │  │     task_title    VARCHAR           │  │  │
+│  │     task_status   VARCHAR            │  │    │  │  │     task_status   VARCHAR           │  │  │
+│  │     task_priority VARCHAR            │  │    │  │  │     created_at    TIMESTAMP        │  │  │
+│  │     created_at    TIMESTAMP          │  │    │  │  │     updated_at    TIMESTAMP        │  │  │
+│  │     updated_at    TIMESTAMP          │  │    │  │  └────────────────────────────────────┘  │  │
+│  │  UQ (task_id, person_id)             │  │    │  │  UQ (task_id, evidence_id)               │  │
+│  └─────────────────────────────────────┘  │    │  │                                          │  │
+│                                            │    │  │  ┌────────────────────────────────────┐  │  │
+└────────────────────────────────────────────┼────┘  │  │       custody_records              │  │  │
+                                             │       │  ├────────────────────────────────────┤  │  │
+┌────────────────────────────────────────────┼───────┐│  │ PK  id            UUID             │  │  │
+│ TASK-SERVICE DB                            │       ││  │ FK  evidence_id   UUID (NOT NULL)  │  │  │
+│  ┌─────────────────────────────────────┐   │       ││  │     action        VARCHAR           │  │  │
+│  │              tasks                   │   │       ││  │     performed_by  VARCHAR           │  │  │
+│  ├─────────────────────────────────────┤   │       ││  │     notes         VARCHAR(2000)     │  │  │
+│  │ PK  id               UUID           │◄──┘       ││  │     performed_at  TIMESTAMP        │  │  │
+│  │     title             VARCHAR        │           ││  └────────────────────────────────────┘  │  │
+│  │     description       VARCHAR(2000)  │           │└─────────────────────────────────────────┘  │
+│  │     status            ENUM           │           └─────────────────────────────────────────────┘
+│  │     priority          ENUM           │
+│  │ FK  case_id           UUID (NOT NULL)│
+│  │ FK  assigned_person_id UUID          │
+│  │ FK  evidence_id       UUID           │
+│  │     due_date          TIMESTAMP      │
+│  │     created_at        TIMESTAMP      │
+│  │     updated_at        TIMESTAMP      │
+│  └─────────────────────────────────────┘
+│
+└─────────────────────────────────────────</div>
+
+<p><strong>Key relationships:</strong></p>
+<ul>
+  <li><strong>Case</strong> is the central aggregate — People, Evidence, and Tasks reference it via <code>caseId</code></li>
+  <li><strong>Task</strong> references a Person (<code>assignedPersonId</code>) and Evidence (<code>evidenceId</code>) by UUID</li>
+  <li>All cross-service references are <strong>UUID-only</strong> (no foreign key constraints — different databases)</li>
+  <li><code>task_assignments</code> and <code>task_evidence_links</code> are <strong>materialized views</strong> populated by Kafka events</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2>8. Class Diagram</h2>
+
+<div class="diagram" style="font-size: 0.72rem;">
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                          case-service                                               │
+│                                                                                                     │
+│  ┌──────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐                     │
+│  │  CaseController   │────▶│    CaseService        │────▶│   CaseRepository     │                     │
+│  │  @RestController   │     │    @Service            │     │   extends            │                     │
+│  ├──────────────────┤     │    @Transactional       │     │   JpaRepository      │                     │
+│  │ GET    /api/cases │     ├──────────────────────┤     │   &lt;CaseEntity, UUID&gt;│                     │
+│  │ GET    /api/cases/│     │ create(CaseRequest)   │     ├──────────────────────┤                     │
+│  │          {id}     │     │ findById(UUID)        │     │ findByStatus()       │                     │
+│  │ POST   /api/cases │     │ findAll()             │     │ findByPriority()     │                     │
+│  │ PUT    /api/cases/│     │ update(UUID, ...)     │     └──────────────────────┘                     │
+│  │          {id}     │     │ delete(UUID)          │                                                  │
+│  │ DELETE /api/cases/│     └──────────────────────┘     ┌──────────────────────┐                     │
+│  │          {id}     │                                   │    CaseEntity         │                     │
+│  └──────────────────┘     ┌──────────────────────┐     │    @Entity             │                     │
+│                            │  CaseRequest (record)│     ├──────────────────────┤                     │
+│                            │  CaseResponse(record)│     │ id: UUID              │                     │
+│                            │  CaseUpdateRequest   │     │ title: String         │                     │
+│                            └──────────────────────┘     │ description: String   │                     │
+│                                                          │ status: CaseStatus    │                     │
+│                             ┌────────────┐               │ priority: CasePriority│                     │
+│                             │ CaseStatus  │               │ createdBy: String     │                     │
+│                             │ OPEN        │               │ createdAt: Instant    │                     │
+│                             │ IN_PROGRESS │               │ updatedAt: Instant    │                     │
+│                             │ CLOSED      │               └──────────────────────┘                     │
+│                             │ ARCHIVED    │                                                            │
+│                             └────────────┘  ┌──────────────┐                                          │
+│                                              │ CasePriority  │                                          │
+│                                              │ LOW,MED,HIGH  │                                          │
+│                                              │ CRITICAL      │                                          │
+│                                              └──────────────┘                                          │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                         task-service                                                │
+│                                                                                                     │
+│  ┌──────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐                     │
+│  │  TaskController   │────▶│    TaskService        │────▶│   TaskRepository     │                     │
+│  │  @RestController   │     │    @Service            │     │   extends            │                     │
+│  ├──────────────────┤     ├──────────────────────┤     │   JpaRepository      │                     │
+│  │ GET  /api/tasks   │     │ create(TaskRequest)   │     ├──────────────────────┤                     │
+│  │ POST /api/tasks   │     │ update(UUID, ...)     │     │ findByCaseId()       │                     │
+│  │ PUT  /api/tasks/  │     │ delete(UUID)          │     │ findByStatus()       │                     │
+│  │        {id}       │     │ findAll/ById/ByCase   │     │ findByAssignedPerson │                     │
+│  │ DELETE /api/tasks/│     │                        │     └──────────────────────┘                     │
+│  │        {id}       │     │ ──publishes──▶         │                                                  │
+│  └──────────────────┘     │ TaskEventPublisher     │     ┌──────────────────────┐                     │
+│                            └──────────────────────┘     │    Task @Entity       │                     │
+│                                     │                    ├──────────────────────┤                     │
+│  ┌──────────────────────────┐       │                    │ id: UUID              │                     │
+│  │   TaskEventPublisher      │◄──────┘                    │ title: String         │                     │
+│  │   @Service                 │                            │ description: String   │                     │
+│  ├──────────────────────────┤                            │ status: TaskStatus    │                     │
+│  │ publish(TaskEvent)        │                            │ priority: TaskPriority│                     │
+│  │ uses KafkaTemplate        │                            │ caseId: UUID          │                     │
+│  │ topic: "task-events"      │                            │ assignedPersonId: UUID│                     │
+│  └──────────────────────────┘                            │ evidenceId: UUID      │                     │
+│                                                          │ dueDate: Instant      │                     │
+│  ┌──────────────────────────┐                            │ createdAt: Instant    │                     │
+│  │  TaskEvent (record)       │                            │ updatedAt: Instant    │                     │
+│  ├──────────────────────────┤                            └──────────────────────┘                     │
+│  │ eventType: String         │                                                                        │
+│  │ taskId: UUID              │                                                                        │
+│  │ title, status, priority   │                                                                        │
+│  │ caseId, assignedPersonId  │                                                                        │
+│  │ evidenceId, occurredAt    │                                                                        │
+│  └──────────────────────────┘                                                                        │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                        people-service                                               │
+│                                                                                                     │
+│  ┌──────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐                     │
+│  │ PersonController  │────▶│   PersonService       │────▶│  PersonRepository    │                     │
+│  ├──────────────────┤     ├──────────────────────┤     ├──────────────────────┤                     │
+│  │ CRUD /api/people  │     │ create, update, del   │     │ findByCaseId()       │                     │
+│  │ GET /{id}/tasks   │     │ findTasksByPersonId() │     │ findByRole()         │                     │
+│  └──────────────────┘     └──────────────────────┘     └──────────────────────┘                     │
+│                                                                                                     │
+│  ┌──────────────────────────┐     ┌──────────────────────┐  ┌──────────────────────┐               │
+│  │  TaskEventConsumer        │────▶│ TaskAssignmentRepo    │  │  Person @Entity       │               │
+│  │  @KafkaListener           │     ├──────────────────────┤  ├──────────────────────┤               │
+│  ├──────────────────────────┤     │ findByPersonId()      │  │ id, firstName,       │               │
+│  │ consume(TaskEvent)        │     │ findByTaskId()        │  │ lastName, role,       │               │
+│  │ handleCreateOrUpdate()    │     │ deleteByTaskId()      │  │ notes, caseId,       │               │
+│  │ handleDelete()            │     └──────────────────────┘  │ createdAt, updatedAt  │               │
+│  └──────────────────────────┘                                └──────────────────────┘               │
+│                                    ┌──────────────────────┐                                          │
+│                                    │ TaskAssignment @Entity│                                          │
+│                                    ├──────────────────────┤                                          │
+│                                    │ id, taskId, personId  │                                          │
+│                                    │ caseId, taskTitle     │                                          │
+│                                    │ taskStatus, taskPrio  │                                          │
+│                                    │ createdAt, updatedAt  │                                          │
+│                                    └──────────────────────┘                                          │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       evidence-service                                              │
+│                                                                                                     │
+│  ┌──────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐                     │
+│  │EvidenceController │────▶│  EvidenceService      │────▶│ EvidenceRepository   │                     │
+│  ├──────────────────┤     ├──────────────────────┤     ├──────────────────────┤                     │
+│  │ CRUD /api/evid..  │     │ create, update, del   │     │ findByCaseId()       │                     │
+│  │ /{id}/custody     │     │ addCustodyRecord()    │     │ findByStatus()       │                     │
+│  │ /{id}/tasks       │     │ getCustodyChain()     │     └──────────────────────┘                     │
+│  └──────────────────┘     │ findTasksByEvidence() │     ┌──────────────────────┐                     │
+│                            └──────────────────────┘     │ CustodyRecordRepo    │                     │
+│                                                          │ findByEvidenceId     │                     │
+│  ┌──────────────────────────┐                            │  OrderByPerformedAt  │                     │
+│  │  TaskEventConsumer        │                            └──────────────────────┘                     │
+│  │  @KafkaListener           │                                                                        │
+│  ├──────────────────────────┤     ┌──────────────────────┐  ┌──────────────────────┐               │
+│  │ consume(TaskEvent)        │────▶│TaskEvidenceLinkRepo  │  │ Evidence @Entity     │               │
+│  │ handleCreateOrUpdate()    │     ├──────────────────────┤  ├──────────────────────┤               │
+│  │ handleDelete()            │     │ findByEvidenceId()   │  │ id, name, description│               │
+│  └──────────────────────────┘     │ findByTaskId()       │  │ type, status, caseId │               │
+│                                    │ deleteByTaskId()     │  │ createdAt, updatedAt │               │
+│                                    └──────────────────────┘  └──────────────────────┘               │
+│                                                                                                     │
+│  ┌────────────────────────┐   ┌────────────────────────┐                                            │
+│  │TaskEvidenceLink @Entity│   │ CustodyRecord @Entity   │                                            │
+│  ├────────────────────────┤   ├────────────────────────┤                                            │
+│  │ id, taskId, evidenceId │   │ id, evidenceId, action  │                                            │
+│  │ caseId, taskTitle      │   │ performedBy, notes      │                                            │
+│  │ taskStatus             │   │ performedAt             │                                            │
+│  │ createdAt, updatedAt   │   └────────────────────────┘                                            │
+│  └────────────────────────┘                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<!-- ================================================================ -->
+<h2>9. API Endpoints Summary</h2>
+
+<table>
+  <tr><th>Service</th><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+  <tr><td rowspan="5">case-service</td><td>GET</td><td>/api/cases</td><td>List all cases</td></tr>
+  <tr><td>GET</td><td>/api/cases/{id}</td><td>Get case by ID</td></tr>
+  <tr><td>POST</td><td>/api/cases</td><td>Create case</td></tr>
+  <tr><td>PUT</td><td>/api/cases/{id}</td><td>Update case</td></tr>
+  <tr><td>DELETE</td><td>/api/cases/{id}</td><td>Delete case</td></tr>
+  <tr><td rowspan="6">people-service</td><td>GET</td><td>/api/people</td><td>List people (?caseId=UUID)</td></tr>
+  <tr><td>GET</td><td>/api/people/{id}</td><td>Get person by ID</td></tr>
+  <tr><td>GET</td><td>/api/people/{id}/tasks</td><td>Get tasks assigned to person (Kafka)</td></tr>
+  <tr><td>POST</td><td>/api/people</td><td>Create person</td></tr>
+  <tr><td>PUT</td><td>/api/people/{id}</td><td>Update person</td></tr>
+  <tr><td>DELETE</td><td>/api/people/{id}</td><td>Delete person</td></tr>
+  <tr><td rowspan="8">evidence-service</td><td>GET</td><td>/api/evidences</td><td>List evidence (?caseId=UUID)</td></tr>
+  <tr><td>GET</td><td>/api/evidences/{id}</td><td>Get evidence by ID</td></tr>
+  <tr><td>GET</td><td>/api/evidences/{id}/tasks</td><td>Get tasks linked to evidence (Kafka)</td></tr>
+  <tr><td>GET</td><td>/api/evidences/{id}/custody</td><td>Get custody chain</td></tr>
+  <tr><td>POST</td><td>/api/evidences</td><td>Create evidence</td></tr>
+  <tr><td>POST</td><td>/api/evidences/{id}/custody</td><td>Add custody record</td></tr>
+  <tr><td>PUT</td><td>/api/evidences/{id}</td><td>Update evidence</td></tr>
+  <tr><td>DELETE</td><td>/api/evidences/{id}</td><td>Delete evidence</td></tr>
+  <tr><td rowspan="5">task-service</td><td>GET</td><td>/api/tasks</td><td>List tasks (?caseId, ?status)</td></tr>
+  <tr><td>GET</td><td>/api/tasks/{id}</td><td>Get task by ID</td></tr>
+  <tr><td>POST</td><td>/api/tasks</td><td>Create task (publishes Kafka event)</td></tr>
+  <tr><td>PUT</td><td>/api/tasks/{id}</td><td>Update task (publishes Kafka event)</td></tr>
+  <tr><td>DELETE</td><td>/api/tasks/{id}</td><td>Delete task (publishes Kafka event)</td></tr>
+</table>
+
+<hr style="margin-top: 48px; border: none; border-top: 1px solid var(--border);">
+<p style="text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 16px;">
+  Carinosas Microservices — Universidad 2026 — Implementacion de Software
+</p>
+
+</body>
+</html>
