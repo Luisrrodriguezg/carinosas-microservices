@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { PersonResponse, PersonRequest, PersonUpdateRequest, TaskAssignmentResponse } from "@/types";
+import type { PersonResponse, PersonRequest, PersonUpdateRequest, TaskAssignmentResponse, CaseResponse } from "@/types";
 import { PersonRole } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,8 @@ export function PeoplePage({ role }: { role: string }) {
   const [selectedPerson, setSelectedPerson] = useState<PersonResponse | null>(null);
   const [personTasks, setPersonTasks] = useState<TaskAssignmentResponse[]>([]);
 
+  const [cases, setCases] = useState<CaseResponse[]>([]);
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [personRole, setPersonRole] = useState<string>(PersonRole.WITNESS);
@@ -51,7 +53,11 @@ export function PeoplePage({ role }: { role: string }) {
     setEditing(null);
   };
 
-  const openCreate = () => { resetForm(); setDialogOpen(true); };
+  const loadCases = async () => {
+    try { setCases(await api.get<CaseResponse[]>("/api/cases")); } catch { /* empty */ }
+  };
+
+  const openCreate = () => { resetForm(); loadCases(); setDialogOpen(true); };
 
   const openEdit = (p: PersonResponse) => {
     setEditing(p);
@@ -156,8 +162,13 @@ export function PeoplePage({ role }: { role: string }) {
                 </div>
                 {!editing && (
                   <div className="space-y-2">
-                    <Label>Case ID *</Label>
-                    <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="UUID of the case" />
+                    <Label>Case *</Label>
+                    <Select value={caseId} onValueChange={(v) => { if (v) setCaseId(v); }}>
+                      <SelectTrigger><SelectValue placeholder="Select a case" /></SelectTrigger>
+                      <SelectContent>
+                        {cases.map((c) => <SelectItem key={c.id} value={c.id}>{c.title} ({c.status})</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 <div className="space-y-2">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { EvidenceResponse, EvidenceRequest, EvidenceUpdateRequest, CustodyRecordResponse, CustodyRecordRequest, TaskEvidenceLinkResponse } from "@/types";
+import type { EvidenceResponse, EvidenceRequest, EvidenceUpdateRequest, CustodyRecordResponse, CustodyRecordRequest, TaskEvidenceLinkResponse, CaseResponse } from "@/types";
 import { EvidenceType, EvidenceStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,8 @@ export function EvidencePage({ role }: { role: string }) {
   const [caseFilter, setCaseFilter] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<EvidenceResponse | null>(null);
+
+  const [cases, setCases] = useState<CaseResponse[]>([]);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -59,7 +61,11 @@ export function EvidencePage({ role }: { role: string }) {
     setEvidenceStatus(EvidenceStatus.COLLECTED); setCaseId(""); setEditing(null);
   };
 
-  const openCreate = () => { resetForm(); setDialogOpen(true); };
+  const loadCases = async () => {
+    try { setCases(await api.get<CaseResponse[]>("/api/cases")); } catch { /* empty */ }
+  };
+
+  const openCreate = () => { resetForm(); loadCases(); setDialogOpen(true); };
 
   const openEdit = (ev: EvidenceResponse) => {
     setEditing(ev);
@@ -199,8 +205,13 @@ export function EvidencePage({ role }: { role: string }) {
                 )}
                 {!editing && (
                   <div className="space-y-2">
-                    <Label>Case ID *</Label>
-                    <Input value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="UUID of the case" />
+                    <Label>Case *</Label>
+                    <Select value={caseId} onValueChange={(v) => { if (v) setCaseId(v); }}>
+                      <SelectTrigger><SelectValue placeholder="Select a case" /></SelectTrigger>
+                      <SelectContent>
+                        {cases.map((c) => <SelectItem key={c.id} value={c.id}>{c.title} ({c.status})</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 <Button onClick={handleSubmit} disabled={!name || (!editing && !caseId)}>
